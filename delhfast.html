@@ -1,0 +1,163 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Delh Fast - Shop Signup</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
+    .container { max-width: 500px; margin: 50px auto; background: white; padding: 20px; border-radius: 8px; position: relative; }
+    input, button { width: 100%; padding: 10px; margin: 10px 0; }
+    .dashboard { display: none; padding: 20px; position: relative; }
+    #orderForm input, #orderForm button { width: 100%; margin-top: 10px; }
+    #logoutBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #d9534f;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 10px 15px;
+      cursor: pointer;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #generateBillBtn {
+      background-color: #5cb85c;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="signup">
+    <div class="topbar">
+      <h2>Delh Fast</h2>
+    </div>
+    <input type="text" id="name" placeholder="Your Name" required />
+    <input type="text" id="mobile" placeholder="Mobile Number" required />
+    <input type="text" id="shopName" placeholder="Shop Name" required />
+    <input type="text" id="address" placeholder="Address" required />
+    <button onclick="createAccount()">Create Account</button>
+  </div>
+
+  <div class="dashboard" id="dashboard">
+    <div class="topbar">
+      <h2>Delh Fast</h2>
+      <button id="generateBillBtn" onclick="generateBill()">Generate Bill</button>
+    </div>
+    <h2 id="greeting"></h2>
+    <div id="orderForm">
+      <h3>Place an Order</h3>
+      <input type="text" id="productName" placeholder="Product Name" required />
+      <input type="text" id="price" placeholder="Price" required />
+      <input type="file" id="billImage" accept="image/*" />
+      <button onclick="sendOrder()">Send Order</button>
+    </div>
+    <button id="logoutBtn" onclick="logout()">Logout</button>
+  </div>
+
+  <script>
+    function createAccount() {
+      const name = document.getElementById('name').value;
+      const mobile = document.getElementById('mobile').value;
+      const shopName = document.getElementById('shopName').value;
+      const address = document.getElementById('address').value;
+
+      if (!name || !mobile || !shopName || !address) {
+        alert("Please fill all fields.");
+        return;
+      }
+
+      localStorage.setItem('userData', JSON.stringify({ name, mobile, shopName, address }));
+      showDashboard();
+    }
+
+    function showDashboard() {
+      const user = JSON.parse(localStorage.getItem('userData'));
+      document.getElementById('signup').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      document.getElementById('greeting').innerText = `Hey, ${user.name}`;
+    }
+
+    function sendOrder() {
+      const productName = document.getElementById('productName').value;
+      const price = document.getElementById('price').value;
+      const billImage = document.getElementById('billImage').files[0];
+      const user = JSON.parse(localStorage.getItem('userData'));
+
+      if (!productName || !price || !billImage) {
+        alert("Please fill all order fields and upload bill image.");
+        return;
+      }
+
+      const order = {
+        date: new Date().toISOString(),
+        name: user.name,
+        mobile: user.mobile,
+        shop: user.shopName,
+        product: productName,
+        price: price
+      };
+
+      let history = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+      history.push(order);
+      localStorage.setItem('orderHistory', JSON.stringify(history));
+
+      const message = `Order from ${user.name} (+91${user.mobile})%0AShop: ${user.shopName}%0AProduct: ${productName}%0APrice: ₹${price}%0A(Note: Please attach the bill image manually.)`;
+      const phoneNumber = '918757219530';
+      const whatsappURL = `https://wa.me/${phoneNumber}?text=${message}`;
+      window.open(whatsappURL, '_blank');
+    }
+
+    function generateBill() {
+      const history = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+      if (history.length === 0) {
+        alert("No orders found.");
+        return;
+      }
+
+      let content = `Delh Fast - Order Bill\n\n`;
+      let total = 0;
+      history.forEach((order, index) => {
+        const date = new Date(order.date);
+        const dateString = date.toLocaleDateString();
+        const timeString = date.toLocaleTimeString();
+        content += `${index + 1}. Product: ${order.product}\n   Date: ${dateString}, Time: ${timeString}\n   Delivery Charge: ₹20\n\n`;
+        total += 20;
+      });
+
+      content += `Total Delivery Charges: ₹${total}`;
+
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'order_bill.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function logout() {
+      localStorage.removeItem('userData');
+      location.reload();
+    }
+
+    window.onload = () => {
+      if (localStorage.getItem('userData')) {
+        showDashboard();
+      }
+    }
+  </script>
+</body>
+</html>
