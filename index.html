@@ -1,4 +1,5 @@
- <!DOCTYPE html>
+ 
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -10,9 +11,10 @@
     input, button { width: 100%; padding: 10px; margin: 10px 0; }
     .dashboard { display: none; padding: 20px; }
     #orderForm input, #orderForm button { width: 100%; margin-top: 10px; }
-    #logoutBtn, #billBtn {
+    #logoutBtn {
       position: fixed;
       bottom: 20px;
+      right: 20px;
       background-color: #d9534f;
       color: white;
       border: none;
@@ -20,11 +22,6 @@
       padding: 10px 15px;
       cursor: pointer;
     }
-    #billBtn {
-      right: 120px;
-      background-color: #5cb85c;
-    }
-    #logoutBtn { right: 20px; }
   </style>
 </head>
 <body>
@@ -42,10 +39,11 @@
     <div id="orderForm">
       <h3>Place an Order</h3>
       <input type="text" id="productName" placeholder="Product Name" required />
+      <input type="number" id="price" placeholder="Product Price" required />
       <input type="file" id="billImage" accept="image/*" />
       <button onclick="sendOrder()">Send Order</button>
     </div>
-    <button id="billBtn" onclick="generateBill()">Generate Bill</button>
+    <button onclick="generateBill()">Generate Bill</button>
     <button id="logoutBtn" onclick="logout()">Logout</button>
   </div>
 
@@ -61,7 +59,8 @@
         return;
       }
 
-      localStorage.setItem('userData', JSON.stringify({ name, mobile, shopName, address }));
+      const user = { name, mobile, shopName, address };
+      localStorage.setItem('userData', JSON.stringify(user));
       showDashboard();
     }
 
@@ -74,64 +73,62 @@
 
     function sendOrder() {
       const productName = document.getElementById('productName').value;
+      const price = document.getElementById('price').value;
       const billImage = document.getElementById('billImage').files[0];
-      const user = JSON.parse(localStorage.getItem('userData'));
 
-      if (!productName || !billImage) {
+      if (!productName || !price || !billImage) {
         alert("Please fill all order fields and upload bill image.");
         return;
       }
 
-      // Save order to user history
-      const order = {
+      const user = JSON.parse(localStorage.getItem('userData'));
+      const orders = JSON.parse(localStorage.getItem('orders') || '{}');
+
+      const newOrder = {
         productName,
+        price: parseFloat(price),
         date: new Date().toLocaleString(),
         deliveryCharge: 20
       };
 
-      const allOrders = JSON.parse(localStorage.getItem('orders')) || {};
-      if (!allOrders[user.mobile]) {
-        allOrders[user.mobile] = [];
+      if (!orders[user.mobile]) {
+        orders[user.mobile] = [];
       }
-      allOrders[user.mobile].push(order);
-      localStorage.setItem('orders', JSON.stringify(allOrders));
 
-      // Send to WhatsApp
-      const message = `Order from ${user.name}%0AMobile: ${user.mobile}%0AShop: ${user.shopName}%0AProduct: ${productName}%0ADelivery: ₹20`;
-      const phoneNumber = '918757219530';
-      const whatsappURL = `https://wa.me/${phoneNumber}?text=${message}`;
+      orders[user.mobile].push(newOrder);
+      localStorage.setItem('orders', JSON.stringify(orders));
+
+      const message = `Order from ${user.name}%0AMobile: ${user.mobile}%0AShop: ${user.shopName}%0AProduct: ${productName}%0APrice: ₹${price}%0ADelivery: ₹20`;
+      const whatsappURL = `https://wa.me/918757219530?text=${message}`;
       window.open(whatsappURL, '_blank');
-
-      // Clear input
-      document.getElementById('productName').value = '';
-      document.getElementById('billImage').value = '';
     }
 
     function generateBill() {
       const user = JSON.parse(localStorage.getItem('userData'));
-      const allOrders = JSON.parse(localStorage.getItem('orders')) || {};
-      const orders = allOrders[user.mobile] || [];
+      const allOrders = JSON.parse(localStorage.getItem('orders') || '{}');
+      const userOrders = allOrders[user.mobile] || [];
 
-      if (orders.length === 0) {
-        alert("No orders to generate bill.");
+      if (userOrders.length === 0) {
+        alert("No orders found.");
         return;
       }
 
-      let bill = `Delh Fast - Bill for ${user.name}\nShop: ${user.shopName}\nMobile: ${user.mobile}\n\nOrders:\n`;
+      let bill = `Delh Fast - Order Bill\nName: ${user.name}\nMobile: ${user.mobile}\nShop: ${user.shopName}\nAddress: ${user.address}\n\n`;
       let total = 0;
-      orders.forEach((order, index) => {
-        bill += `${index + 1}. ${order.productName} | ${order.date} | ₹${order.deliveryCharge}\n`;
-        total += order.deliveryCharge;
+
+      userOrders.forEach((order, i) => {
+        const lineTotal = order.price + order.deliveryCharge;
+        bill += `${i + 1}. ${order.productName} | ₹${order.price} | ${order.date} | Delivery: ₹${order.deliveryCharge} | Total: ₹${lineTotal}\n`;
+        total += lineTotal;
       });
 
-      bill += `\nTotal: ₹${total}`;
+      bill += `\nTotal Amount Payable: ₹${total}`;
 
-      // Download bill as file
       const blob = new Blob([bill], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `bill_${user.mobile}.txt`;
+      a.download = `Bill_${user.mobile}.txt`;
       a.click();
       URL.revokeObjectURL(url);
     }
@@ -141,11 +138,12 @@
       location.reload();
     }
 
+    // Auto-login if data exists
     window.onload = () => {
       if (localStorage.getItem('userData')) {
         showDashboard();
       }
-    }
+    };
   </script>
 </body>
 </html>
