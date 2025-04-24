@@ -6,14 +6,13 @@
   <title>Delh Fast - Shop Signup</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
-    .container { max-width: 500px; margin: 50px auto; background: white; padding: 20px; border-radius: 8px; position: relative; }
+    .container { max-width: 500px; margin: 50px auto; background: white; padding: 20px; border-radius: 8px; }
     input, button { width: 100%; padding: 10px; margin: 10px 0; }
-    .dashboard { display: none; padding: 20px; position: relative; }
+    .dashboard { display: none; padding: 20px; }
     #orderForm input, #orderForm button { width: 100%; margin-top: 10px; }
-    #logoutBtn {
+    #logoutBtn, #billBtn {
       position: fixed;
       bottom: 20px;
-      right: 20px;
       background-color: #d9534f;
       color: white;
       border: none;
@@ -21,27 +20,16 @@
       padding: 10px 15px;
       cursor: pointer;
     }
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    #generateBillBtn {
+    #billBtn {
+      right: 120px;
       background-color: #5cb85c;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      padding: 8px 12px;
-      font-size: 14px;
-      cursor: pointer;
     }
+    #logoutBtn { right: 20px; }
   </style>
 </head>
 <body>
   <div class="container" id="signup">
-    <div class="topbar">
-      <h2>Delh Fast</h2>
-    </div>
+    <h2>Delh Fast - Create Your Account</h2>
     <input type="text" id="name" placeholder="Your Name" required />
     <input type="text" id="mobile" placeholder="Mobile Number" required />
     <input type="text" id="shopName" placeholder="Shop Name" required />
@@ -50,18 +38,14 @@
   </div>
 
   <div class="dashboard" id="dashboard">
-    <div class="topbar">
-      <h2>Delh Fast</h2>
-      <button id="generateBillBtn" onclick="generateBill()">Generate Bill</button>
-    </div>
     <h2 id="greeting"></h2>
     <div id="orderForm">
       <h3>Place an Order</h3>
       <input type="text" id="productName" placeholder="Product Name" required />
-      <input type="text" id="price" placeholder="Price" required />
       <input type="file" id="billImage" accept="image/*" />
       <button onclick="sendOrder()">Send Order</button>
     </div>
+    <button id="billBtn" onclick="generateBill()">Generate Bill</button>
     <button id="logoutBtn" onclick="logout()">Logout</button>
   </div>
 
@@ -90,61 +74,65 @@
 
     function sendOrder() {
       const productName = document.getElementById('productName').value;
-      const price = document.getElementById('price').value;
       const billImage = document.getElementById('billImage').files[0];
       const user = JSON.parse(localStorage.getItem('userData'));
 
-      if (!productName || !price || !billImage) {
+      if (!productName || !billImage) {
         alert("Please fill all order fields and upload bill image.");
         return;
       }
 
+      // Save order to user history
       const order = {
-        date: new Date().toISOString(),
-        name: user.name,
-        mobile: user.mobile,
-        shop: user.shopName,
-        product: productName,
-        price: price
+        productName,
+        date: new Date().toLocaleString(),
+        deliveryCharge: 20
       };
 
-      let history = JSON.parse(localStorage.getItem('orderHistory') || '[]');
-      history.push(order);
-      localStorage.setItem('orderHistory', JSON.stringify(history));
+      const allOrders = JSON.parse(localStorage.getItem('orders')) || {};
+      if (!allOrders[user.mobile]) {
+        allOrders[user.mobile] = [];
+      }
+      allOrders[user.mobile].push(order);
+      localStorage.setItem('orders', JSON.stringify(allOrders));
 
-      const message = `Order from ${user.name} (+91${user.mobile})%0AShop: ${user.shopName}%0AProduct: ${productName}%0APrice: ₹${price}%0A(Note: Please attach the bill image manually.)`;
+      // Send to WhatsApp
+      const message = `Order from ${user.name}%0AMobile: ${user.mobile}%0AShop: ${user.shopName}%0AProduct: ${productName}%0ADelivery: ₹20`;
       const phoneNumber = '918757219530';
       const whatsappURL = `https://wa.me/${phoneNumber}?text=${message}`;
       window.open(whatsappURL, '_blank');
+
+      // Clear input
+      document.getElementById('productName').value = '';
+      document.getElementById('billImage').value = '';
     }
 
     function generateBill() {
-      const history = JSON.parse(localStorage.getItem('orderHistory') || '[]');
-      if (history.length === 0) {
-        alert("No orders found.");
+      const user = JSON.parse(localStorage.getItem('userData'));
+      const allOrders = JSON.parse(localStorage.getItem('orders')) || {};
+      const orders = allOrders[user.mobile] || [];
+
+      if (orders.length === 0) {
+        alert("No orders to generate bill.");
         return;
       }
 
-      let content = `Delh Fast - Order Bill\n\n`;
+      let bill = `Delh Fast - Bill for ${user.name}\nShop: ${user.shopName}\nMobile: ${user.mobile}\n\nOrders:\n`;
       let total = 0;
-      history.forEach((order, index) => {
-        const date = new Date(order.date);
-        const dateString = date.toLocaleDateString();
-        const timeString = date.toLocaleTimeString();
-        content += `${index + 1}. Product: ${order.product}\n   Date: ${dateString}, Time: ${timeString}\n   Delivery Charge: ₹20\n\n`;
-        total += 20;
+      orders.forEach((order, index) => {
+        bill += `${index + 1}. ${order.productName} | ${order.date} | ₹${order.deliveryCharge}\n`;
+        total += order.deliveryCharge;
       });
 
-      content += `Total Delivery Charges: ₹${total}`;
+      bill += `\nTotal: ₹${total}`;
 
-      const blob = new Blob([content], { type: 'text/plain' });
+      // Download bill as file
+      const blob = new Blob([bill], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'order_bill.txt';
-      document.body.appendChild(a);
+      a.download = `bill_${user.mobile}.txt`;
       a.click();
-      document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
 
