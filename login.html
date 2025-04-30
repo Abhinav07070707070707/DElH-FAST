@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Seller Login - Delh Fast</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: Arial; background-color: #f4f4f4; padding: 20px; }
+    .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
+    input, button { width: 100%; padding: 10px; margin: 10px 0; }
+    .btn { background: #28a745; color: white; border: none; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Seller Login</h2>
+  <input type="text" id="sellerName" placeholder="Your Name" required />
+  <input type="password" id="sellerPassword" placeholder="Password" required />
+  <input type="text" id="shopName" placeholder="Shop Name" required />
+  <input type="text" id="shopAddress" placeholder="Shop Address" required />
+  <button class="btn" onclick="login()">Login</button>
+</div>
+
+<script>
+  // Auto-redirect if already logged in
+  if (localStorage.getItem('sellerInfo')) {
+    window.location.href = "add_product.html";
+  }
+
+  function login() {
+    const name = document.getElementById('sellerName').value.trim();
+    const password = document.getElementById('sellerPassword').value.trim();
+    const shop = document.getElementById('shopName').value.trim();
+    const address = document.getElementById('shopAddress').value.trim();
+
+    if (!name || !password || !shop || !address) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    const sellerInfo = { name, password, shop, address };
+    localStorage.setItem("sellerInfo", JSON.stringify(sellerInfo));
+    window.location.href = "add_product.html";
+  }
+</script>
+
+</body>
+</html>
