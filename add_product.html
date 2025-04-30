@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Add Products - Delh Fast</title>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
+    .container { background: white; padding: 20px; border-radius: 10px; max-width: 600px; margin: auto; }
+    h2 { text-align: center; }
+    input, textarea, button {
+      width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box;
+    }
+    .btn { background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .product-list { margin-top: 30px; }
+    .product-card {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+    }
+    .product-card img {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      display: block;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Add Products for Shopping</h2>
+
+  <input type="text" id="productName" placeholder="Product Name" required>
+  <input type="number" id="productPrice" placeholder="Product Price (in ₹)" required>
+  <textarea id="productDesc" placeholder="Product Description" required></textarea>
+  <input type="file" id="productImage" accept="image/*">
+  <button class="btn" onclick="addProduct()">Add Product</button>
+
+  <div class="product-list" id="productList">
+    <h3>Added Products</h3>
+    <!-- Products will appear here -->
+  </div>
+</div>
+
+<script>
+  // Check if seller is logged in
+  const seller = JSON.parse(localStorage.getItem("sellerInfo"));
+  if (!seller) {
+    alert("Please login first!");
+    window.location.href = "login.html";
+  }
+
+  function addProduct() {
+    const name = document.getElementById('productName').value.trim();
+    const price = document.getElementById('productPrice').value.trim();
+    const desc = document.getElementById('productDesc').value.trim();
+    const imageInput = document.getElementById('productImage');
+
+    if (!name || !price || !desc) {
+      alert('Please fill all fields');
+      return;
+    }
+
+    if (imageInput.files && imageInput.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const imageUrl = e.target.result;
+        saveProduct(name, price, desc, imageUrl);
+      }
+      reader.readAsDataURL(imageInput.files[0]);
+    } else {
+      saveProduct(name, price, desc, '');
+    }
+  }
+
+  function saveProduct(name, price, desc, imageUrl) {
+    const products = JSON.parse(localStorage.getItem('shoppingProducts')) || [];
+
+    const product = {
+      name,
+      price,
+      description: desc,
+      category: "Grocery",
+      imageUrl,
+      sellerName: seller.name,
+      shopName: seller.shop,
+      shopAddress: seller.address
+    };
+
+    products.push(product);
+    localStorage.setItem('shoppingProducts', JSON.stringify(products));
+    alert('Product added successfully!');
+
+    document.getElementById('productName').value = '';
+    document.getElementById('productPrice').value = '';
+    document.getElementById('productDesc').value = '';
+    document.getElementById('productImage').value = '';
+
+    showProducts();
+  }
+
+  function showProducts() {
+    const products = JSON.parse(localStorage.getItem('shoppingProducts')) || [];
+    const productList = document.getElementById('productList');
+    productList.innerHTML = '<h3>Added Products</h3>';
+
+    products.forEach(prod => {
+      const div = document.createElement('div');
+      div.className = 'product-card';
+      div.innerHTML = `
+        <strong>Name:</strong> ${prod.name}<br>
+        <strong>Price:</strong> ₹${prod.price}<br>
+        <strong>Description:</strong> ${prod.description}<br>
+        <strong>Seller:</strong> ${prod.sellerName}<br>
+        <strong>Shop:</strong> ${prod.shopName}<br>
+        <strong>Address:</strong> ${prod.shopAddress}<br>
+        ${prod.imageUrl ? `<img src="${prod.imageUrl}" alt="Product Image">` : ''}
+      `;
+      productList.appendChild(div);
+    });
+  }
+
+  window.onload = showProducts;
+</script>
+
+</body>
+</html>
